@@ -72,6 +72,89 @@ class AutoSyncCoordinatorTest {
     }
 
     @Test
+    fun `screen wake schedules lookup without a window event`() {
+        val scheduler = FakeScheduler()
+        val locator = QueueLocator(
+            NeoReaderLocationResult.Found(foundLocation("content://book/awake")),
+        )
+        val coordinator = coordinator(scheduler, locator, FakeFingerprintStore())
+
+        coordinator.onScreenOff()
+        coordinator.onScreenOn()
+
+        assertEquals(listOf(2_000L), scheduler.activeDelays())
+        scheduler.runNext()
+
+        assertEquals(1, locator.calls)
+    }
+
+    @Test
+    fun `screen wake and window event share one initial lookup`() {
+        val scheduler = FakeScheduler()
+        val locator = QueueLocator(NeoReaderLocationResult.NotFound("not ready"))
+        val coordinator = coordinator(scheduler, locator, FakeFingerprintStore())
+
+        coordinator.onScreenOff()
+        coordinator.onScreenOn()
+        coordinator.onReaderWindowChanged()
+
+        assertEquals(listOf(2_000L), scheduler.activeDelays())
+        scheduler.runNext()
+
+        assertEquals(1, locator.calls)
+    }
+
+    @Test
+    fun `screen wake does not schedule while disabled`() {
+        val scheduler = FakeScheduler()
+        val locator = QueueLocator(NeoReaderLocationResult.NotFound("not ready"))
+        val coordinator = coordinator(
+            scheduler = scheduler,
+            locator = locator,
+            store = FakeFingerprintStore(),
+            enabled = false,
+        )
+
+        coordinator.onScreenOff()
+        coordinator.onScreenOn()
+        scheduler.runAll()
+
+        assertEquals(0, locator.calls)
+    }
+
+    @Test
+    fun `screen wake does not schedule while externally disabled`() {
+        val scheduler = FakeScheduler()
+        val locator = QueueLocator(NeoReaderLocationResult.NotFound("not ready"))
+        val coordinator = coordinator(
+            scheduler = scheduler,
+            locator = locator,
+            store = FakeFingerprintStore(),
+            enabledProvider = { false },
+        )
+
+        coordinator.onScreenOff()
+        coordinator.onScreenOn()
+        scheduler.runAll()
+
+        assertEquals(0, locator.calls)
+    }
+
+    @Test
+    fun `screen off cancels lookup scheduled by screen wake`() {
+        val scheduler = FakeScheduler()
+        val locator = QueueLocator(NeoReaderLocationResult.NotFound("not ready"))
+        val coordinator = coordinator(scheduler, locator, FakeFingerprintStore())
+
+        coordinator.onScreenOff()
+        coordinator.onScreenOn()
+        coordinator.onScreenOff()
+        scheduler.runAll()
+
+        assertEquals(0, locator.calls)
+    }
+
+    @Test
     fun `permission failure is fail closed without retry`() {
         val scheduler = FakeScheduler()
         val locator = QueueLocator(NeoReaderLocationResult.PermissionDenied("missing"))

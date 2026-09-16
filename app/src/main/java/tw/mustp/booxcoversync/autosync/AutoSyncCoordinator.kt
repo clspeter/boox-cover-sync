@@ -40,9 +40,10 @@ object AutoSyncUriFingerprint {
 /**
  * Event-driven coordinator for automatic cover synchronisation.
  *
- * A NeoReader window event schedules one debounced provider lookup. Missing or
- * unchanged results are retried at the configured delays because BOOX Metadata
- * can briefly continue reporting the previous book. Hard failures stop immediately.
+ * A NeoReader window event schedules a coalesced provider lookup. Each event
+ * cycle retains its bounded follow-up checks even after a successful publish:
+ * BOOX Metadata can briefly report a different but still stale book.
+ * Hard locator failures stop immediately.
  */
 class AutoSyncCoordinator(
     private val scheduler: AutoSyncScheduler,
@@ -60,6 +61,7 @@ class AutoSyncCoordinator(
     private var screenOn = true
     private var enabled = enabled
     private var pending: AutoSyncCancellable? = null
+    private var pendingIsRetry = false
     private var inFlight: InFlight? = null
     private var recheckRequested = false
 
@@ -67,13 +69,7 @@ class AutoSyncCoordinator(
     /** Called only after an AccessibilityService filters a NeoReader window event. */
     fun onReaderWindowChanged() {
         synchronized(stateLock) {
-            cancelPendingLocked()
-            if (!screenOn || !enabled || !isExternallyEnabledLocked()) return
-            if (inFlight != null) {
-                recheckRequested = true
-                return
-            }
-            scheduleLookupLocked(debounceMillis)
+            requestLookupLocked()
         }
     }
 
@@ -88,10 +84,11 @@ class AutoSyncCoordinator(
         }
     }
 
-    /** Allows a later Accessibility event to start a new lookup. */
+    /** Starts one bounded lookup cycle when the screen wakes. */
     fun onScreenOn() {
         synchronized(stateLock) {
             screenOn = true
+            requestLookupLocked()
         }
     }
 
@@ -157,6 +154,10 @@ class AutoSyncCoordinator(
             }
             if (shouldRecheck) {
                 scheduleLookupLocked(debounceMillis)
+            } else {
+                // Success only proves that this candidate was published, not
+                // that the provider has caught up with the current book.
+                scheduleRetry(generation, current.retryIndex)
             }
         }
     }
@@ -191,6 +192,19 @@ class AutoSyncCoordinator(
         }
     }
 
+    private fun requestLookupLocked() {
+        if (!screenOn || !enabled || !isExternallyEnabledLocked()) return
+        if (inFlight != null) {
+            recheckRequested = true
+            return
+        }
+        // Keep the first event's deadline: continuous window/provider
+        // events must not postpone the initial lookup indefinitely.
+        if (pending != null && !pendingIsRetry) return
+        cancelPendingLocked()
+        scheduleLookupLocked(debounceMillis)
+    }
+
     private fun handleFound(location: NeoReaderLocation, eventGeneration: Long, retryIndex: Int) {
         val fingerprint = try {
             fingerprintForUri(location.contentUri)
@@ -210,7 +224,11 @@ class AutoSyncCoordinator(
                 if (current?.fingerprint == fingerprint && current.generation == eventGeneration) {
                     false
                 } else {
-                    inFlight = InFlight(fingerprint = fingerprint, generation = eventGeneration)
+                    inFlight = InFlight(
+                        fingerprint = fingerprint,
+                        generation = eventGeneration,
+                        retryIndex = retryIndex,
+                    )
                     true
                 }
             }
@@ -230,6 +248,7 @@ class AutoSyncCoordinator(
         val delay = targetOffset - previousOffset
         synchronized(stateLock) {
             if (!isCurrentLocked(eventGeneration)) return
+            pendingIsRetry = true
             pending = scheduler.schedule(delay) {
                 attempt(eventGeneration, retryIndex + 1)
             }
@@ -254,11 +273,13 @@ class AutoSyncCoordinator(
     private fun cancelPendingLocked() {
         pending?.cancel()
         pending = null
+        pendingIsRetry = false
     }
 
     private fun scheduleLookupLocked(delayMillis: Long) {
         generation += 1
         val eventGeneration = generation
+        pendingIsRetry = false
         pending = scheduler.schedule(delayMillis) {
             attempt(eventGeneration, retryIndex = 0)
         }
@@ -267,6 +288,7 @@ class AutoSyncCoordinator(
     private data class InFlight(
         val fingerprint: String,
         val generation: Long,
+        val retryIndex: Int,
     )
 
     companion object {

@@ -16,5 +16,17 @@ Usage Access：%4$s</string>
     <string name="usage_access_settings_unavailable">找不到 Usage Access 設定頁，請在 BOOX 設定搜尋「Usage Access」。</string>
     <string name="epub_selected_without_details">已選擇 EPUB（不顯示檔名或路徑）</string>
     <string name="cover_ready_without_book_details">封面：已解析（不顯示書籍資訊）</string>
+    <string name="cover_not_ready_without_book_details">封面：尚未取得最近閱讀紀錄</string>
     <string name="cover_ready_status">狀態：封面已準備，請確認開關後同步。</string>
+    <string name="sync_latest_button">同步最新閱讀封面</string>
+    <string name="latest_cover_waiting">狀態：等待同步</string>
+    <string name="latest_cover_sync_running">狀態：查詢最近閱讀紀錄並同步一次…</string>
+    <string name="latest_cover_sync_success">狀態：%1$s 已同步完成。&#10;已送出 type=%2$s。</string>
+    <string name="latest_cover_sync_failed">無法完成最近閱讀封面同步，請按按鈕重試。</string>
+    <string name="latest_cover_no_reading_record">找不到可用的最近閱讀 EPUB，請先在 NeoReader 開啟一本 EPUB 後重試。</string>
+    <string name="latest_cover_missing_dump_permission">目前沒有讀取最近閱讀紀錄所需的 DUMP 權限；請用 ADB 授予後重試。</string>
+    <string name="latest_cover_missing_usage_access">目前沒有讀取最近閱讀紀錄所需的 Usage Access；請在設定中允許後重試。</string>
+    <string name="latest_cover_lookup_failed">讀取最近閱讀紀錄失敗，請確認 NeoReader 與 BOOX 系統服務可用後重試。</string>
+    <string name="latest_cover_preview_ready">封面：最近閱讀紀錄已同步</string>
+    <string name="latest_cover_preview_unavailable">封面：已同步（預覽不可用）</string>
 </resources>

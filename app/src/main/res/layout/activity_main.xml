@@ -24,7 +24,22 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="選擇 EPUB，預覽封面後同步到休眠與關機畫面。自動同步只在偵測到新書時工作。"
+            android:text="開啟 App 時會查詢 NeoReader 最近閱讀紀錄並同步一次；也可以按鈕重試。"
+            android:textSize="16sp" />
+
+        <Button
+            android:id="@+id/sync_latest_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="@string/sync_latest_button" />
+
+        <TextView
+            android:id="@+id/status_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/latest_cover_waiting"
             android:textSize="16sp" />
 
         <TextView
@@ -39,7 +54,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:text="偵測 NeoReader 開啟新書時才同步一次，平常不輪詢以節省電量。"
+            android:text="背景自動同步是選用功能；手動開啟 App 同步不需要無障礙服務。下方權限狀態僅供背景同步與診斷參考。"
             android:textSize="13sp" />
 
         <Switch
@@ -68,7 +83,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:text="必要權限：Accessibility、Usage Access、DUMP。DUMP 請用 ADB 一次授予；App 不會自行授予。"
+            android:text="手動同步不需要無障礙服務。背景同步是否能持續，取決於無障礙服務與 BOOX 背景執行設定；DUMP／Usage Access 僅供診斷參考。"
             android:textSize="12sp" />
 
         <Button
@@ -126,14 +141,6 @@
             android:layout_marginTop="8dp"
             android:enabled="false"
             android:text="立即重新同步" />
-
-        <TextView
-            android:id="@+id/status_text"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="狀態：等待選擇 EPUB"
-            android:textSize="16sp" />
 
         <TextView
             android:id="@+id/storage_permission_status_text"

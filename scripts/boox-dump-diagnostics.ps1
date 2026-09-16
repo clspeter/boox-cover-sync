@@ -41,6 +41,18 @@ if (-not $packageInstalled) {
     exit 1
 }
 
+$enabledServices = Invoke-AdbCommand -Arguments @('shell', 'settings', 'get', 'secure', 'enabled_accessibility_services')
+$accessibilityEnabled = ($enabledServices -join '') -match 'tw\.mustp\.booxcoversync/'
+$accessibilityState = Invoke-AdbCommand -Arguments @('shell', 'dumpsys', 'accessibility')
+$serviceStopped = [bool]($accessibilityState | Where-Object {
+    $_ -match 'Crashed services:' -and $_ -match 'tw\.mustp\.booxcoversync/'
+})
+Write-Host "Accessibility service enabled in Settings: $accessibilityEnabled"
+Write-Host "Accessibility service listed as crashed/stopped: $serviceStopped"
+if (-not $accessibilityEnabled -or $serviceStopped) {
+    Write-Warning 'Automatic sync cannot rely on the app toggle alone. Turn BOOX Cover Sync off and on in Accessibility Settings, and check BOOX app freezing/background settings.'
+}
+
 if ($GrantDump) {
     Write-Host 'Attempting android.permission.DUMP grant (signature protection may reject this).'
     try {
@@ -72,11 +84,11 @@ if ($GrantUsageStats) {
     }
 }
 
-$usagePermission = & adb -s $Serial shell pm check-permission android.permission.PACKAGE_USAGE_STATS tw.mustp.booxcoversync 2>&1
-$usagePermissionExitCode = $LASTEXITCODE
-$usagePermissionText = $usagePermission -join ' '
+# BOOX Android 11 does not implement `pm check-permission`. Read the actual
+# grant from package state instead of reporting an unsupported command as denial.
+$packagePermissions = Invoke-AdbCommand -Arguments @('shell', 'dumpsys', 'package', 'tw.mustp.booxcoversync')
 $manifestUsageStatsGranted =
-    $usagePermissionExitCode -eq 0 -and $usagePermissionText -match '(?i)\bgranted\b'
+    ($packagePermissions -join "`n") -match '(?m)^\s*android\.permission\.PACKAGE_USAGE_STATS:\s+granted=true\b'
 Write-Host "PACKAGE_USAGE_STATS manifest permission granted: $manifestUsageStatsGranted"
 
 $usageStats = & adb -s $Serial shell appops get tw.mustp.booxcoversync android:get_usage_stats 2>&1
