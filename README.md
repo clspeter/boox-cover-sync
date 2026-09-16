@@ -18,7 +18,7 @@
 
 ## 快速開始
 
-安裝 APK 並完成下方儲存空間授權後：
+安裝 APK 後即可開始；若公共書庫無法讀取或休眠封面無法套用，再依下方說明檢查儲存空間授權：
 
 1. 在 NeoReader 開啟要閱讀的 EPUB。
 2. 從桌面開啟 **BOOX Cover Sync**，等待上方顯示同步結果。
@@ -68,7 +68,7 @@ adb -s $serial shell am start -n tw.mustp.booxcoversync/.MainActivity
 
 公共輸出路徑無法寫入時，App 會依序嘗試 app-specific 外部 Pictures 與內部 Pictures；但 BOOX 系統服務未必能讀取這些位置，因此「App 成功寫檔」不代表休眠圖一定可用。
 
-UI 仍保留 DUMP／Usage Access 的診斷狀態。該狀態不能單獨判定 Metadata 定位是否可用，也不能證明無障礙服務真的保持連接。
+UI 仍保留 DUMP／Usage Access 的診斷狀態，且「條件完整／尚缺必要權限」文字仍沿用舊版三項權限判斷。即使顯示缺少權限，目前 Metadata 流程仍可能正常同步；該狀態不能單獨判定定位是否可用，也不能證明無障礙服務真的保持連接。
 
 ## 啟用背景自動同步
 
