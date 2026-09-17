@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+# PR builds are intentionally unable to read release signing secrets.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      # actions/checkout v7.0.1; pinned to a full commit SHA.
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: Select and verify JDK 17
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${JAVA_HOME_17_X64:?The runner must provide JAVA_HOME_17_X64}"
+          export JAVA_HOME="$JAVA_HOME_17_X64"
+          export PATH="$JAVA_HOME/bin:$PATH"
+          echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+          echo "$JAVA_HOME/bin" >> "$GITHUB_PATH"
+          java -version 2>&1 | tee /tmp/java-version.txt
+          grep -Eq 'version "17([.]|[^"]*"$)' /tmp/java-version.txt
+
+      - name: Verify Android SDK 36 and Build Tools 35.0.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          [[ -n "$sdk_root" && -d "$sdk_root" ]]
+          sdkmanager_bin="$(command -v sdkmanager || true)"
+          if [[ -z "$sdkmanager_bin" ]]; then
+            for candidate in "$sdk_root"/cmdline-tools/*/bin/sdkmanager; do
+              if [[ -x "$candidate" ]]; then sdkmanager_bin="$candidate"; break; fi
+            done
+          fi
+          if [[ ! -f "$sdk_root/platforms/android-36/android.jar" ||
+                ! -x "$sdk_root/build-tools/35.0.0/aapt2" ||
+                ! -x "$sdk_root/build-tools/35.0.0/zipalign" ]]; then
+            : "${sdkmanager_bin:?sdkmanager is required to install the pinned Android SDK packages}"
+            yes | "$sdkmanager_bin" --licenses >/dev/null 2>&1 || true
+            "$sdkmanager_bin" "platforms;android-36" "build-tools;35.0.0"
+          fi
+          test -f "$sdk_root/platforms/android-36/android.jar"
+          test -x "$sdk_root/build-tools/35.0.0/aapt2"
+          test -x "$sdk_root/build-tools/35.0.0/zipalign"
+
+      - name: Check Gradle version (distribution checksum is pinned in wrapper properties)
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x gradlew
+          ./gradlew --version | tee /tmp/gradle-version.txt
+          grep -Eq 'Gradle 8[.]13([.]|$)' /tmp/gradle-version.txt
+
+      - name: Run release unit tests and lint
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./gradlew :app:testReleaseUnitTest :app:lintRelease \
+            -Pkotlin.compiler.execution.strategy=in-process \
+            --no-daemon

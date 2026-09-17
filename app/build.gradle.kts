@@ -1,8 +1,45 @@
 import org.gradle.api.tasks.testing.Test
+import java.util.Properties
 
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+}
+
+val versionPropertiesFile = rootProject.file("version.properties")
+require(versionPropertiesFile.isFile) {
+    "Missing required version file: ${versionPropertiesFile.absolutePath}"
+}
+
+val versionProperties = Properties()
+versionPropertiesFile.inputStream().use(versionProperties::load)
+
+val expectedVersionKeys = setOf("VERSION_NAME", "VERSION_CODE")
+val actualVersionKeys = versionProperties.stringPropertyNames()
+require(actualVersionKeys == expectedVersionKeys) {
+    "version.properties must contain exactly VERSION_NAME and VERSION_CODE"
+}
+
+fun requiredVersionProperty(key: String): String {
+    val value = versionProperties.getProperty(key)?.trim()
+    require(!value.isNullOrEmpty()) {
+        "version.properties property $key must not be empty"
+    }
+    return value
+}
+
+val versionNameFromProperties = requiredVersionProperty("VERSION_NAME")
+require(Regex("^[0-9]+\\.[0-9]+\\.[0-9]+$").matches(versionNameFromProperties)) {
+    "VERSION_NAME must use X.Y.Z format"
+}
+
+val versionCodeFromProperties = requiredVersionProperty("VERSION_CODE")
+require(Regex("^[1-9][0-9]*$").matches(versionCodeFromProperties)) {
+    "VERSION_CODE must be a positive integer without leading zeroes"
+}
+val parsedVersionCode = versionCodeFromProperties.toIntOrNull()
+require(parsedVersionCode != null) {
+    "VERSION_CODE is too large for Android versionCode: $versionCodeFromProperties"
 }
 
 android {
@@ -14,8 +51,8 @@ android {
         applicationId = "tw.mustp.booxcoversync"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = parsedVersionCode
+        versionName = versionNameFromProperties
 
         testInstrumentationRunner = "android.test.InstrumentationTestRunner"
     }

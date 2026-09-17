@@ -37,7 +37,7 @@ flowchart TD
 | `ANDROID_KEY_ALIAS` | 簽章金鑰名稱 |
 | `ANDROID_KEY_PASSWORD` | 簽章金鑰密碼 |
 
-正式簽章憑證 SHA-256 以非機密 Environment variable 固定，workflow 比對指紋避免意外換 key。缺少必要設定就失敗，不退回 debug signing。
+正式簽章憑證 SHA-256 存為非機密 Environment variable `ANDROID_SIGNING_CERT_SHA256`，workflow 比對指紋避免意外換 key。缺少必要設定就失敗，不退回 debug signing。
 
 金鑰只供簽章 job 使用，建置與測試不提供 Secrets。簽章 job 不執行 repository 的 Gradle，僅處理同一次 workflow 的產物。先 `zipalign` 再 `apksigner`，簽完不修改 APK。金鑰暫存在 runner temporary directory，結束時清除，不保存至 cache、log 或 artifact。
 
@@ -72,6 +72,7 @@ CODEOWNERS 本身不是存取控制。擁有管理權限的人可以修改遠端
 - 已建立公開 repo `clspeter/boox-cover-sync`。
 - 已設定 `release` Environment 僅接受 `v*` tag，Actions 預設唯讀，禁止 workflow 批准 PR。
 - 已啟用版本 tag 的建立權限與禁止更新／刪除規則。
-- 本機流程與 main 保護的部署驗證仍在進行；尚未建立或上傳正式 key，尚未發布正式 APK。
+- 已啟用 main 的 PR、官方 GitHub Actions `verify` 必要檢查與禁止 force push／刪除規則；單人維護批准數為 0。
+- PR 合併由 GitHub 的 `verify` 必要檢查把關；正式簽章發布仍需設定金鑰，目前尚未建立或上傳正式 key，也尚未發布正式 APK。
 
-先前本機執行 `:app:testReleaseUnitTest :app:lintRelease :app:assembleRelease` 成功：80 個單元測試通過，lint 0 errors／30 warnings。產物 `app/build/outputs/apk/release/app-release-unsigned.apk` 尚未簽章，不能直接安裝；這不等於 GitHub 簽章發布已驗證。
+改用版本檔後，本機執行 `:app:testReleaseUnitTest :app:lintRelease :app:assembleRelease` 成功：80 個單元測試通過，lint 0 errors／30 warnings。產物 `app/build/outputs/apk/release/app-release-unsigned.apk` 尚未簽章，不能直接安裝；這不等於 GitHub 簽章發布已驗證。
