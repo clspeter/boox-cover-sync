@@ -8,3 +8,9 @@ local.properties
 *.iml
 *.apk
 work/
+*.jks
+*.keystore
+*.p12
+*.pfx
+keystore.properties
+signing.properties
