@@ -1,0 +1,338 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+# No job receives write access by default. The publish job opts in explicitly.
+permissions: {}
+
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  APP_ID: tw.mustp.booxcoversync
+  ANDROID_PLATFORM: android-36
+  ANDROID_BUILD_TOOLS: 35.0.0
+
+jobs:
+  validate:
+    name: validate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    outputs:
+      tag: ${{ steps.metadata.outputs.tag }}
+      commit: ${{ steps.metadata.outputs.commit }}
+      version_name: ${{ steps.metadata.outputs.version_name }}
+      version_code: ${{ steps.metadata.outputs.version_code }}
+    steps:
+      # actions/checkout v4.2.2; pinned to a full commit SHA.
+      - name: Checkout full history
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate tag, main tip, version and versionCode
+        id: metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --force --tags origin
+          git fetch --force origin main:refs/remotes/origin/main
+          bash scripts/release/validate-release.sh "$GITHUB_REF_NAME"
+
+  build:
+    name: build
+    needs: validate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    outputs:
+      release_input_artifact_id: ${{ steps.upload_unsigned.outputs.artifact-id }}
+    steps:
+      # actions/checkout v4.2.2; pinned to a full commit SHA.
+      - name: Checkout validated commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ needs.validate.outputs.commit }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Select and verify JDK 17
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${JAVA_HOME_17_X64:?The runner must provide JAVA_HOME_17_X64}"
+          export JAVA_HOME="$JAVA_HOME_17_X64"
+          export PATH="$JAVA_HOME/bin:$PATH"
+          echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+          echo "$JAVA_HOME/bin" >> "$GITHUB_PATH"
+          java -version 2>&1 | tee /tmp/java-version.txt
+          grep -Eq 'version "17([.]|[^"]*"$)' /tmp/java-version.txt
+
+      - name: Verify Android SDK 36 and Build Tools 35.0.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          [[ -n "$sdk_root" && -d "$sdk_root" ]]
+          sdkmanager_bin="$(command -v sdkmanager || true)"
+          if [[ -z "$sdkmanager_bin" ]]; then
+            for candidate in "$sdk_root"/cmdline-tools/*/bin/sdkmanager; do
+              if [[ -x "$candidate" ]]; then sdkmanager_bin="$candidate"; break; fi
+            done
+          fi
+          if [[ ! -f "$sdk_root/platforms/android-36/android.jar" || ! -x "$sdk_root/build-tools/35.0.0/aapt2" ]]; then
+            : "${sdkmanager_bin:?sdkmanager is required to install the pinned Android SDK packages}"
+            yes | "$sdkmanager_bin" --licenses >/dev/null 2>&1 || true
+            "$sdkmanager_bin" "platforms;android-36" "build-tools;35.0.0"
+          fi
+          test -f "$sdk_root/platforms/android-36/android.jar"
+          test -x "$sdk_root/build-tools/35.0.0/aapt2"
+
+      - name: Build and test unsigned release APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x gradlew
+          ./gradlew :app:testReleaseUnitTest :app:lintRelease :app:assembleRelease \
+            -Pkotlin.compiler.execution.strategy=in-process \
+            --no-daemon
+
+      - name: Prepare unsigned release artifact
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ needs.validate.outputs.tag }}
+          RELEASE_COMMIT: ${{ needs.validate.outputs.commit }}
+          RELEASE_VERSION_NAME: ${{ needs.validate.outputs.version_name }}
+          RELEASE_VERSION_CODE: ${{ needs.validate.outputs.version_code }}
+        run: |
+          set -euo pipefail
+          command -v jq >/dev/null
+          mkdir -p dist
+          unsigned="dist/boox-cover-sync-${RELEASE_TAG}-unsigned.apk"
+          cp app/build/outputs/apk/release/app-release-unsigned.apk "$unsigned"
+          jq -n \
+            --arg tag "$RELEASE_TAG" \
+            --arg commit "$RELEASE_COMMIT" \
+            --arg versionName "$RELEASE_VERSION_NAME" \
+            --arg applicationId "$APP_ID" \
+            --arg versionCode "$RELEASE_VERSION_CODE" \
+            --arg sdk "$ANDROID_PLATFORM" \
+            --arg buildTools "$ANDROID_BUILD_TOOLS" \
+            '{tag:$tag, commit:$commit, applicationId:$applicationId,
+              versionName:$versionName, versionCode:($versionCode|tonumber),
+              compileSdk:$sdk, buildTools:$buildTools, signed:false}' \
+            > dist/build-info.json
+
+      # actions/upload-artifact v4.6.2; pinned to a full commit SHA.
+      - name: Upload unsigned artifact
+        id: upload_unsigned
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: release-input-${{ github.run_id }}-${{ github.run_attempt }}
+          path: dist
+          if-no-files-found: error
+          retention-days: 14
+
+  sign:
+    name: sign-and-verify
+    needs:
+      - validate
+      - build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment:
+      name: release
+    permissions:
+      actions: read
+    outputs:
+      release_output_artifact_id: ${{ steps.upload_signed.outputs.artifact-id }}
+    steps:
+      # actions/download-artifact v4.3.0; pinned to a full commit SHA.
+      - name: Download artifact from this workflow run
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          artifact-ids: ${{ needs.build.outputs.release_input_artifact_id }}
+          merge-multiple: true
+          path: input
+
+      - name: Verify Android signing tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          [[ -n "$sdk_root" && -d "$sdk_root" ]]
+          sdkmanager_bin="$(command -v sdkmanager || true)"
+          if [[ -z "$sdkmanager_bin" ]]; then
+            for candidate in "$sdk_root"/cmdline-tools/*/bin/sdkmanager; do
+              if [[ -x "$candidate" ]]; then sdkmanager_bin="$candidate"; break; fi
+            done
+          fi
+          if [[ ! -x "$sdk_root/build-tools/35.0.0/apksigner" ||
+                ! -x "$sdk_root/build-tools/35.0.0/zipalign" ||
+                ! -x "$sdk_root/build-tools/35.0.0/aapt2" ]]; then
+            : "${sdkmanager_bin:?sdkmanager is required to install the pinned Android SDK packages}"
+            yes | "$sdkmanager_bin" --licenses >/dev/null 2>&1 || true
+            "$sdkmanager_bin" "platforms;android-36" "build-tools;35.0.0"
+          fi
+          test -x "$sdk_root/build-tools/35.0.0/apksigner"
+          test -x "$sdk_root/build-tools/35.0.0/zipalign"
+          test -x "$sdk_root/build-tools/35.0.0/aapt2"
+
+      - name: Sign, verify and prepare public assets
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_SIGNING_CERT_SHA256: ${{ vars.ANDROID_SIGNING_CERT_SHA256 }}
+          RELEASE_TAG: ${{ needs.validate.outputs.tag }}
+          EXPECTED_VERSION_NAME: ${{ needs.validate.outputs.version_name }}
+          EXPECTED_VERSION_CODE: ${{ needs.validate.outputs.version_code }}
+        run: |
+          set -euo pipefail
+          umask 077
+          : "${ANDROID_KEYSTORE_BASE64:?Missing ANDROID_KEYSTORE_BASE64}"
+          : "${ANDROID_KEYSTORE_PASSWORD:?Missing ANDROID_KEYSTORE_PASSWORD}"
+          : "${ANDROID_KEY_ALIAS:?Missing ANDROID_KEY_ALIAS}"
+          : "${ANDROID_KEY_PASSWORD:?Missing ANDROID_KEY_PASSWORD}"
+          : "${ANDROID_SIGNING_CERT_SHA256:?Missing ANDROID_SIGNING_CERT_SHA256 environment variable}"
+
+          expected_cert="${ANDROID_SIGNING_CERT_SHA256//:/}"
+          expected_cert="${expected_cert^^}"
+          [[ "$expected_cert" =~ ^[0-9A-F]{64}$ ]]
+
+          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          build_tools="$sdk_root/build-tools/35.0.0"
+          tmp_dir="$(mktemp -d)"
+          trap 'rm -rf "$tmp_dir"' EXIT
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$tmp_dir/release.keystore"
+          chmod 600 "$tmp_dir/release.keystore"
+
+          unsigned="$(find input -maxdepth 1 -type f -name '*-unsigned.apk' -print -quit)"
+          [[ -n "$unsigned" && -f "$unsigned" ]]
+          test -f input/build-info.json
+          mkdir -p output
+          aligned="$tmp_dir/aligned.apk"
+          signed="output/boox-cover-sync-${RELEASE_TAG}.apk"
+          "$build_tools/zipalign" -P 16 -f 4 "$unsigned" "$aligned"
+          "$build_tools/apksigner" sign \
+            --ks "$tmp_dir/release.keystore" \
+            --ks-pass env:ANDROID_KEYSTORE_PASSWORD \
+            --ks-key-alias "$ANDROID_KEY_ALIAS" \
+            --key-pass env:ANDROID_KEY_PASSWORD \
+            --out "$signed" "$aligned"
+
+          "$build_tools/zipalign" -c -P 16 -v 4 "$signed" >/tmp/zipalign.txt
+          cert_output="$("$build_tools/apksigner" verify --verbose --print-certs "$signed" 2>&1)"
+          printf '%s\n' "$cert_output" | grep -Eq 'Verified using v2 scheme.*: true'
+          actual_cert="$(printf '%s\n' "$cert_output" | sed -nE 's/.*certificate SHA-256 digest: ([0-9A-Fa-f:]+).*/\1/p' | head -n 1 | tr -d ':')"
+          actual_cert="${actual_cert^^}"
+          [[ "$actual_cert" == "$expected_cert" ]] || {
+            echo "Signed APK certificate fingerprint does not match the protected environment variable." >&2
+            exit 1
+          }
+
+          sdk_badging="$($build_tools/aapt2 dump badging "$signed")"
+          package_name="$(printf '%s\n' "$sdk_badging" | sed -nE "s/^package: name='([^']+)'.*/\1/p" | head -n 1)"
+          apk_version_name="$(printf '%s\n' "$sdk_badging" | sed -nE "s/^package:.*versionName='([^']+)'.*/\1/p" | head -n 1)"
+          apk_version_code="$(printf '%s\n' "$sdk_badging" | sed -nE "s/^package:.*versionCode='([^']+)'.*/\1/p" | head -n 1)"
+          [[ "$package_name" == "$APP_ID" ]]
+          [[ "$apk_version_name" == "$EXPECTED_VERSION_NAME" ]]
+          [[ "$apk_version_code" == "$EXPECTED_VERSION_CODE" ]]
+          if printf '%s\n' "$sdk_badging" | grep -q 'application-debuggable'; then
+            echo 'Release APK is debuggable.' >&2
+            exit 1
+          fi
+
+          apk_sha256="$(sha256sum "$signed" | awk '{print toupper($1)}')"
+          jq --arg cert "$actual_cert" \
+            --arg sha256 "$apk_sha256" \
+            --arg file "$(basename "$signed")" \
+            '. + {signed:true, signingCertificateSha256:$cert, apkSha256:$sha256, apkFile:$file}' \
+            input/build-info.json > output/build-info.json
+          printf '%s  %s\n' "$apk_sha256" "$(basename "$signed")" > output/SHA256SUMS
+          {
+            printf '## %s\n\n' "$RELEASE_TAG"
+            printf 'Automatically built and signed from commit `%s`.\n\n' '${{ needs.validate.outputs.commit }}'
+            printf -- '- Package: `%s`\n' "$APP_ID"
+            printf -- '- Version: `%s` (versionCode `%s`)\n' "$EXPECTED_VERSION_NAME" "$EXPECTED_VERSION_CODE"
+            printf -- '- APK SHA-256: `%s`\n' "$apk_sha256"
+            printf -- '- Signing certificate SHA-256: `%s`\n\n' "$actual_cert"
+            printf '%s\n' 'This release was produced by the protected GitHub Actions release workflow.'
+          } > output/release-notes.md
+
+      # actions/upload-artifact v4.6.2; pinned to a full commit SHA.
+      - name: Upload signed release assets
+        id: upload_signed
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: release-output-${{ github.run_id }}-${{ github.run_attempt }}
+          path: output
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    name: publish
+    needs: sign
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      # actions/download-artifact v4.3.0; pinned to a full commit SHA.
+      - name: Download signed assets from this workflow run
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          artifact-ids: ${{ needs.sign.outputs.release_output_artifact_id }}
+          merge-multiple: true
+          path: release-output
+
+      - name: Publish immutable GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ -f release-output/boox-cover-sync-${RELEASE_TAG}.apk ]]
+          [[ -f release-output/SHA256SUMS ]]
+          [[ -f release-output/build-info.json ]]
+          [[ -f release-output/release-notes.md ]]
+          (cd release-output && sha256sum --check SHA256SUMS)
+
+          set +e
+          gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1
+          existing_status=$?
+          set -e
+          if [[ "$existing_status" -eq 0 ]]; then
+            echo "A GitHub Release already exists for $RELEASE_TAG; refusing to overwrite it." >&2
+            exit 1
+          fi
+          [[ "$existing_status" -eq 1 ]] || {
+            echo "Could not safely determine whether $RELEASE_TAG already has a Release." >&2
+            exit 1
+          }
+
+          gh release create "$RELEASE_TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --draft \
+            --title "Boox Cover Sync $RELEASE_TAG" \
+            --notes-file release-output/release-notes.md \
+            --verify-tag \
+            release-output/boox-cover-sync-${RELEASE_TAG}.apk \
+            release-output/SHA256SUMS \
+            release-output/build-info.json
+
+          gh release edit "$RELEASE_TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --draft=false

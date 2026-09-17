@@ -1,0 +1,6 @@
+# Ownership notification; actual enforcement is configured in repository rules.
+/.github/workflows/ @clspeter
+/scripts/release/ @clspeter
+/app/build.gradle.kts @clspeter
+/version.properties @clspeter
+/gradle/wrapper/gradle-wrapper.properties @clspeter
