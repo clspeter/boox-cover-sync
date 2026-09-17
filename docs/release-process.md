@@ -73,6 +73,6 @@ CODEOWNERS 本身不是存取控制。擁有管理權限的人可以修改遠端
 - 已設定 `release` Environment 僅接受 `v*` tag，Actions 預設唯讀，禁止 workflow 批准 PR。
 - 已啟用版本 tag 的建立權限與禁止更新／刪除規則。
 - 已啟用 main 的 PR、官方 GitHub Actions `verify` 必要檢查與禁止 force push／刪除規則；單人維護批准數為 0。
-- workflow 的 GitHub 執行驗證仍在進行；尚未建立或上傳正式 key，尚未發布正式 APK。
+- PR 合併由 GitHub 的 `verify` 必要檢查把關；正式簽章發布仍需設定金鑰，目前尚未建立或上傳正式 key，也尚未發布正式 APK。
 
 改用版本檔後，本機執行 `:app:testReleaseUnitTest :app:lintRelease :app:assembleRelease` 成功：80 個單元測試通過，lint 0 errors／30 warnings。產物 `app/build/outputs/apk/release/app-release-unsigned.apk` 尚未簽章，不能直接安裝；這不等於 GitHub 簽章發布已驗證。
