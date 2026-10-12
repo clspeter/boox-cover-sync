@@ -54,7 +54,7 @@ Both screen switches default to on and may reset when reopening the app; check t
 2. Open the app's **Optimize → Other → Allow background activity** settings and choose **Unlimited / 持續運行**.
 3. Enable **BOOX Cover Sync** in the system's **Accessibility** settings.
 4. Return to the app and turn on **啟用自動同步** (enable automatic sync).
-5. Open another EPUB in NeoReader, allow time for syncing, then put the device to sleep and check the cover.
+5. Open another EPUB in NeoReader, **stay on it for about 10 seconds** to let sync finish, then put the device to sleep and check the cover.
 
 Menu names vary by BOOX model, firmware, and system language. Background sync updates **both** sleep and shutdown covers, independently of the manual screen switches.
 
@@ -62,6 +62,8 @@ Menu names vary by BOOX model, firmware, and system language. Background sync up
 > **Unfreezing the app alone may not be enough.** The tested BOOX had a separate **5-minute background limit**, after which syncing could stop. Set it to Unlimited and recheck it after changing E InkWise profiles or reinstalling the app.
 >
 > Waking the screen does not reliably restart an app stopped by the system. Open BOOX Cover Sync manually to sync again.
+>
+> Sync usually finishes within about 5 seconds of opening a book. **Sleeping immediately after opening a book** cancels the unfinished sync, so that sleep still shows the previous book; the app catches up after wake and the next sleep shows the new cover.
 
 For lower battery use, leave **啟用自動同步** off and open the app only when you want to change the cover. Unlimited background execution does not keep the screen on, but background processing may still use additional power. Battery impact has not been measured.
 
@@ -78,7 +80,7 @@ Install the newer official release APK over the existing official version to ret
 | --- | --- |
 | **Device compatibility** | Tested on BOOX Page / BOOX 4.2 only. Covers are sized for Page; appearance and behavior on other devices are unverified. |
 | **Book formats** | EPUB only; no PDF cover extraction. The EPUB must declare a cover image. DRM-protected books or files without read access may not work. |
-| **Latest-book detection** | Uses BOOX reading records, which may be delayed or point to an earlier book. It cannot guarantee the book currently on screen. Selecting an EPUB avoids relying on those records. |
+| **Latest-book detection** | Picks the book whose BOOX library record changed most recently (the newer of `updatedAt` and `lastAccess`); tested only with NeoReader on BOOX Page. If another app such as cloud sync updates a different book's record, the wrong book may be chosen. Selecting an EPUB avoids relying on those records. |
 | **Background reliability** | BOOX may stop the app. Only a short background test has passed; long-term operation and battery impact remain unverified. The accessibility shortcut button is not implemented. |
 | **Screen settings and confirmation** | Manual screen choices are not saved across app restarts; background sync applies both screens. “Sync complete” means the request was sent, so check the actual sleep screen. |
 | **Storage** | Generated per-book cover images can accumulate; automatic cleanup is not implemented. |
@@ -88,7 +90,7 @@ Install the newer official release APK over the existing official version to ret
 
 | Symptom | Try this |
 | --- | --- |
-| An older book's cover appears | Wait about 20 seconds and tap **同步最新閱讀封面**; if needed, use **選擇 EPUB**. |
+| An older book's cover appears | Wait about 10 seconds after opening a book before sleeping; if still wrong, tap **同步最新閱讀封面** or use **選擇 EPUB**. |
 | Sync stops after a few minutes | Unfreeze the app and set its background time limit to **Unlimited / 持續運行**. |
 | Accessibility is enabled but nothing happens | Turn this app's accessibility service off and on, or open the app to sync manually. |
 | A book cannot be found or read | Check that it is an EPUB, still exists on the device, and has the required storage access. |
