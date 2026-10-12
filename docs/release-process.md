@@ -1,6 +1,6 @@
 # 自編譯與發布流程
 
-[使用手冊](../README.md) · [技術文件](technical-guide.md) · [維護慣例](maintenance.md)
+[繁體中文使用手冊](../README.zh-TW.md) · [English guide](../README.md) · [技術文件](technical-guide.md) · [維護慣例](maintenance.md)
 
 ## 採用的流程
 

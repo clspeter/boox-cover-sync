@@ -1,74 +1,113 @@
-# BOOX Cover Sync 使用手冊
+<div align="center">
 
-把 EPUB 書籍封面設為 BOOX 的休眠與關機畫面。
+# BOOX Cover Sync
 
-**不需要 Root，日常使用也不需要連接電腦。** 已在 BOOX Page／BOOX 4.2 測試；其他機型與版本尚未確認。
+**Your book cover, on your BOOX sleep and shutdown screens.**
 
-## 安裝與更新
+No root required · Local processing · Optional background sync
 
-1. 將本專案的 APK 安裝檔放到 BOOX，點開安裝；若系統要求，允許該來源安裝應用程式。
-2. 開啟 **BOOX Cover Sync**。
-3. 若無法讀取書籍或套用封面，點「開啟公共儲存空間設定」，允許管理所有檔案。
+**English** · [繁體中文](README.zh-TW.md)
 
-更新時直接安裝新版。若顯示無法安裝，先確認安裝檔來源，不要急著卸載，以免失去設定與授權。
+[Download APK](https://github.com/clspeter/boox-cover-sync/releases/latest) · [Quick start](#quick-start) · [Known limitations](#known-limitations)
 
-需要自行製作 APK 或使用電腦安裝，請看[技術文件](docs/technical-guide.md)。
+</div>
 
-## 最簡單：開 App 同步一次
+---
 
-1. 在 NeoReader 開啟要閱讀的 EPUB。
-2. 從桌面開啟 **BOOX Cover Sync**，它會自動同步一次。
-3. 等畫面顯示「同步完成」，再讓 BOOX 休眠確認封面。
+Use an EPUB cover as your BOOX screensaver: open the app to sync your latest NeoReader reading record, or choose a book yourself. Background sync is available if you prefer automatic updates.
 
-App 已開啟時，按上方的 **「同步最新閱讀封面」** 就能重試。這個方式不需要開啟無障礙服務。
+> [!NOTE]
+> Tested on **BOOX Page with BOOX 4.2**. Other models and firmware versions are unverified. The app interface is currently in **Traditional Chinese**; this guide includes the on-screen button labels.
 
-BOOX 的閱讀紀錄有時會延遲。如果還是前一本，等約 20 秒再試；若仍沒更新，可以直接指定 EPUB。
+## Choose how to sync
 
-## 自己選擇封面書籍
+| Mode | What to do | Accessibility service |
+| --- | --- | --- |
+| **Sync when opening the app** | Read in NeoReader, then open BOOX Cover Sync. | Not needed |
+| **Choose an EPUB** | Pick a book and apply its cover. | Not needed |
+| **Background sync** | Enable automatic sync and allow background execution. | Required |
 
-1. 點「選擇 EPUB」。
-2. 選取書籍並確認封面預覽。
-3. 選擇要同步「休眠畫面」或「關機畫面」，至少開啟一個。
-4. 點「立即重新同步」。
+## Quick start
 
-兩個畫面開關預設都開啟；重新開啟 App 後請再確認。設定關機封面**不會立即關機**，只會更換下次關機時顯示的圖片。
+1. Open the [latest release](https://github.com/clspeter/boox-cover-sync/releases/latest), download the `.apk` asset, and install it on your BOOX. Allow installation from that source if prompted.
+2. Open **BOOX Cover Sync**. If reading books or applying covers fails, tap **開啟公共儲存空間設定** and allow access to manage all files.
+3. Open an EPUB in **NeoReader**, then open **BOOX Cover Sync** from the home screen. It will sync once automatically.
+4. Wait for **同步完成** (sync complete), then put the device to sleep to check the cover.
 
-目前支援 EPUB，不支援 PDF；有閱讀保護的書籍可能無法使用。
+To retry while the app is open, tap **同步最新閱讀封面** (sync latest reading cover). No computer or accessibility service is needed for this mode.
 
-## 想自動換封面：開啟背景同步
+> [!TIP]
+> Seeing an older book? BOOX reading records can lag behind. Wait about **20 seconds**, then retry. If the wrong cover persists, choose the EPUB directly below.
 
-1. 在 BOOX「應用」頁長按 **BOOX Cover Sync 圖示**，若看到「解凍」就點選它。
-2. 長按圖示 →「優化」→「其它」→「允許後台持續運行」，選擇 **「持續運行」**並確認。
-3. 到系統「無障礙」設定，啟用 **BOOX Cover Sync**。
-4. 回到 App，開啟「啟用自動同步」。
-5. 在 NeoReader 換一本書，等待後休眠，確認封面有更新。
+## Choose a cover yourself
 
-背景同步會同時更新休眠與關機封面。選單名稱可能因 BOOX 版本而不同，「持續運行」也可能顯示為「無限制」或 Unlimited。
+1. Tap **選擇 EPUB** (choose EPUB).
+2. Select your book and check the cover preview.
+3. Enable **同步休眠畫面** (sleep screen), **同步關機畫面** (shutdown screen), or both.
+4. Tap **立即重新同步** (sync again now).
 
-### 務必檢查：背景可能只允許 5 分鐘
+Both screen switches default to on and may reset when reopening the app; check them again before syncing. Applying a shutdown cover **does not shut down the device**.
 
-**這台 BOOX 的背景執行時間原本設為 5 分鐘，時間到了可能停止更新。** 即使已經「解凍」，仍要另外把上述時間改成「持續運行」。
+## Optional: background sync
 
-切換 E InkWise 的「個性化／推薦」等設定檔，或重新安裝 App 後，請再次確認。只把螢幕喚醒，不一定能恢復已被系統停止的 App；此時可手動開啟 App 同步。
+1. On the BOOX Apps screen, long-press the app icon and unfreeze it if **解凍** is shown.
+2. Open the app's **Optimize → Other → Allow background activity** settings and choose **Unlimited / 持續運行**.
+3. Enable **BOOX Cover Sync** in the system's **Accessibility** settings.
+4. Return to the app and turn on **啟用自動同步** (enable automatic sync).
+5. Open another EPUB in NeoReader, allow time for syncing, then put the device to sleep and check the cover.
 
-本機調整後已通過短時間背景測試，長時間使用仍需觀察。
+Menu names vary by BOOX model, firmware, and system language. Background sync updates **both** sleep and shutdown covers, independently of the manual screen switches.
 
-## 想省電怎麼設定？
+> [!IMPORTANT]
+> **Unfreezing the app alone may not be enough.** The tested BOOX had a separate **5-minute background limit**, after which syncing could stop. Set it to Unlimited and recheck it after changing E InkWise profiles or reinstalling the app.
+>
+> Waking the screen does not reliably restart an app stopped by the system. Open BOOX Cover Sync manually to sync again.
 
-**關閉 App 裡的「啟用自動同步」，需要換封面時再手動開 App。** 手動同步仍然可用。
+For lower battery use, leave **啟用自動同步** off and open the app only when you want to change the cover. Unlimited background execution does not keep the screen on, but background processing may still use additional power. Battery impact has not been measured.
 
-「持續運行」不會讓螢幕一直亮著，也不代表 App 一直忙碌，但允許背景執行仍可能增加耗電。目前沒有實際耗電數據。
+## Updating
 
-## 常見問題
+Install the newer official release APK over the existing official version to retain settings. If installation fails, check the APK source and signing compatibility before uninstalling.
 
-| 遇到的情況 | 可以怎麼做 |
+> [!WARNING]
+> Earlier **debug builds use a different signing key** and cannot be updated directly to the official release. Switching requires uninstalling the debug app first, which removes its settings and permissions. Set up permissions and BOOX background options again afterward.
+
+## Known limitations
+
+| Area | What to expect |
 | --- | --- |
-| 封面還是前一本 | 等約 20 秒後按「同步最新閱讀封面」；仍不對就用「選擇 EPUB」。 |
-| 過幾分鐘就不更新 | 確認已解凍，並將背景執行時間改成「持續運行」。 |
-| 無障礙開著卻沒反應 | 將本 App 的無障礙關閉再開啟；也可直接開 App 手動同步。 |
-| 找不到書籍或同步失敗 | 確認書籍是 EPUB、檔案仍存在，並檢查儲存空間授權。 |
-| 顯示完成，但休眠圖沒換 | 檢查預覽與「同步休眠畫面」開關，再同步一次。 |
+| **Device compatibility** | Tested on BOOX Page / BOOX 4.2 only. Covers are sized for Page; appearance and behavior on other devices are unverified. |
+| **Book formats** | EPUB only; no PDF cover extraction. The EPUB must declare a cover image. DRM-protected books or files without read access may not work. |
+| **Latest-book detection** | Uses BOOX reading records, which may be delayed or point to an earlier book. It cannot guarantee the book currently on screen. Selecting an EPUB avoids relying on those records. |
+| **Background reliability** | BOOX may stop the app. Only a short background test has passed; long-term operation and battery impact remain unverified. The accessibility shortcut button is not implemented. |
+| **Screen settings and confirmation** | Manual screen choices are not saved across app restarts; background sync applies both screens. “Sync complete” means the request was sent, so check the actual sleep screen. |
+| **Storage** | Generated per-book cover images can accumulate; automatic cleanup is not implemented. |
+| **Language** | The app UI is currently Traditional Chinese. An English README does not change the app language. |
 
-畫面上的權限提示不一定代表無法同步，可以先按「同步最新閱讀封面」確認實際結果。其他診斷方式請看[技術文件](docs/technical-guide.md)。
+## Troubleshooting
 
-封面在裝置上處理，不會由本 App 上傳書籍。分享截圖時，請留意封面本身可能包含書名。
+| Symptom | Try this |
+| --- | --- |
+| An older book's cover appears | Wait about 20 seconds and tap **同步最新閱讀封面**; if needed, use **選擇 EPUB**. |
+| Sync stops after a few minutes | Unfreeze the app and set its background time limit to **Unlimited / 持續運行**. |
+| Accessibility is enabled but nothing happens | Turn this app's accessibility service off and on, or open the app to sync manually. |
+| A book cannot be found or read | Check that it is an EPUB, still exists on the device, and has the required storage access. |
+| Sync completes but the sleep cover stays the same | Check the preview, enable **同步休眠畫面**, and retry. Confirm storage access if it still fails. |
+
+Some permission indicators are retained for diagnostics and do not determine whether manual sync can work. Try syncing first; see the technical guide if more diagnosis is needed.
+
+## Privacy
+
+Book parsing and cover processing happen **on your device**. The app does not request internet access or upload your books. Cover previews and generated images can still reveal book titles—check them before sharing screenshots or files.
+
+## Further reading
+
+These documents are currently in Traditional Chinese:
+
+- [Technical guide](docs/technical-guide.md) — building, permissions, and diagnosis.
+- [Release process](docs/release-process.md) — automated builds and signing.
+- [Project maintenance](docs/maintenance.md) — contribution workflow and repository protections.
+
+---
+
+[Download the latest release](https://github.com/clspeter/boox-cover-sync/releases/latest) · [繁體中文使用手冊](README.zh-TW.md)
