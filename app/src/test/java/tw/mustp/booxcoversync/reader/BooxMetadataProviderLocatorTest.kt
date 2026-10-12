@@ -32,8 +32,8 @@ class BooxMetadataProviderLocatorTest {
                 queriedProjection = projection
                 queriedSort = sortOrder
                 MatrixCursor(BooxMetadataProviderLocator.projectionForTest()).apply {
-                    addRow(arrayOf(100L, "epub", older.absolutePath))
-                    addRow(arrayOf(200L, "EPUB", newer.absolutePath))
+                    addRow(arrayOf(100L, "epub", older.absolutePath, 100L))
+                    addRow(arrayOf(200L, "EPUB", newer.absolutePath, 200L))
                 }
             },
             externalStorageRoot = root,
@@ -51,7 +51,7 @@ class BooxMetadataProviderLocatorTest {
             queriedUri.toString(),
         )
         assertEquals(
-            listOf("lastAccess", "type", "nativeAbsolutePath"),
+            listOf("lastAccess", "type", "nativeAbsolutePath", "updatedAt"),
             queriedProjection?.toList(),
         )
         assertEquals("lastAccess DESC", queriedSort)
@@ -67,8 +67,8 @@ class BooxMetadataProviderLocatorTest {
         val locator = BooxMetadataProviderLocator(
             query = { _, _, _ ->
                 MatrixCursor(BooxMetadataProviderLocator.projectionForTest()).apply {
-                    addRow(arrayOf(300L, "pdf", safePdf.absolutePath))
-                    addRow(arrayOf(400L, "epub", outside.absolutePath))
+                    addRow(arrayOf(300L, "pdf", safePdf.absolutePath, 300L))
+                    addRow(arrayOf(400L, "epub", outside.absolutePath, 400L))
                 }
             },
             externalStorageRoot = root,

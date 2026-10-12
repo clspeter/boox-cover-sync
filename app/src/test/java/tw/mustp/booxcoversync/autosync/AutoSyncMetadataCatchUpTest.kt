@@ -229,7 +229,7 @@ class AutoSyncMetadataCatchUpTest {
 
     private fun metadataCursor(book: File, lastAccess: Long): MatrixCursor =
         MatrixCursor(BooxMetadataProviderLocator.projectionForTest()).apply {
-            addRow(arrayOf(lastAccess, "epub", book.absolutePath))
+            addRow(arrayOf(lastAccess, "epub", book.absolutePath, lastAccess))
         }
 
     private fun privateUri(fileName: String): Uri = Uri.parse(
