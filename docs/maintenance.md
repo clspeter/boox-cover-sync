@@ -1,6 +1,6 @@
 # 小型專案維護慣例
 
-[使用手冊](../README.md) · [發布流程](release-process.md)
+[繁體中文使用手冊](../README.zh-TW.md) · [English guide](../README.md) · [發布流程](release-process.md)
 
 本專案採單人也能維持的流程：短期分支與 PR、自動檢查、版本 tag 發布；不要求每次發布人工批准或實機驗收。
 

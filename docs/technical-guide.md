@@ -1,6 +1,6 @@
 # BOOX Cover Sync 技術文件
 
-[返回使用手冊](../README.md)
+[繁體中文使用手冊](../README.zh-TW.md) · [English guide](../README.md)
 
 本文件供開發、建置與診斷使用；一般操作與背景設定請看使用手冊。實作與驗收資料整理至 2026-09-17。
 
