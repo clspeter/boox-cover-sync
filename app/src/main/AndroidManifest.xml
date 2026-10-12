@@ -12,6 +12,7 @@
 
     <queries>
         <package android:name="com.onyx" />
+        <package android:name="com.onyx.kreader" />
         <provider android:authorities="com.onyx.content.database.ContentProvider" />
     </queries>
 
