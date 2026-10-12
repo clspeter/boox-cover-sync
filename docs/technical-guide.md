@@ -111,13 +111,15 @@ Activity 的休眠／關機開關預設開啟，未保存至 SharedPreferences�
 ```text
 開啟 App／按鈕，或背景事件
   → BOOX Metadata provider
-  → 選擇 lastAccess 最新的有效 EPUB
+  → 選擇 max(lastAccess, updatedAt) 最新的有效 EPUB
   → 讀取並解析封面
   → 縮放、寫入 JPEG
   → BOOX screensaver 廣播
 ```
 
-`BooxMetadataProviderLocator` 查詢 `com.onyx.content.database.ContentProvider/Metadata`。`DumpsysNeoReaderLocator` 保留作為實驗／診斷程式，不在目前正式同步路徑。
+`BooxMetadataProviderLocator` 查詢 `com.onyx.content.database.ContentProvider/Metadata`（由 `com.onyx.kreader` 提供，manifest `<queries>` 須宣告該套件，否則 Android 11 package visibility 會讓查詢失敗）。`DumpsysNeoReaderLocator` 保留作為實驗／診斷程式，不在目前正式同步路徑。
+
+實機觀測（2026-10-12）：從書庫開啟另一本書時，NeoReader 立即更新該列 `updatedAt`，但 `lastAccess` 要到閱讀器暫停（例如熄屏）才寫入。只看 `lastAccess` 會在熄屏後才看到新書，背景流程已因熄屏取消，必須喚醒再鎖一次才換封面；因此以兩者較新者排序。
 
 NeoReader 的私有 FileProvider URI 可能拒絕直接讀取。`BooxEpubInputSource` 只對已知的 `com.onyx.kreader.onyx.fileprovider` 與 `external` root 嘗試公共儲存空間 fallback，驗證 canonical path、儲存根目錄與 EPUB 副檔名；不是任意 URI 的權限繞過機制。
 

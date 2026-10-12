@@ -39,6 +39,7 @@ class BooxMetadataProviderLocator(
                 val lastAccessIndex = cursor.getColumnIndex(COLUMN_LAST_ACCESS)
                 val typeIndex = cursor.getColumnIndex(COLUMN_TYPE)
                 val pathIndex = cursor.getColumnIndex(COLUMN_NATIVE_ABSOLUTE_PATH)
+                val updatedAtIndex = cursor.getColumnIndex(COLUMN_UPDATED_AT)
                 val rows = ArrayList<BooxMetadataRow>()
 
                 while (cursor.moveToNext()) {
@@ -46,6 +47,7 @@ class BooxMetadataProviderLocator(
                         lastAccess = readTimestamp(cursor, lastAccessIndex),
                         type = cursor.getString(typeIndex),
                         nativeAbsolutePath = cursor.getString(pathIndex),
+                        updatedAt = readTimestamp(cursor, updatedAtIndex),
                     )
                 }
 
@@ -77,7 +79,8 @@ class BooxMetadataProviderLocator(
     private fun hasRequiredColumns(cursor: Cursor): Boolean =
         cursor.getColumnIndex(COLUMN_LAST_ACCESS) >= 0 &&
             cursor.getColumnIndex(COLUMN_TYPE) >= 0 &&
-            cursor.getColumnIndex(COLUMN_NATIVE_ABSOLUTE_PATH) >= 0
+            cursor.getColumnIndex(COLUMN_NATIVE_ABSOLUTE_PATH) >= 0 &&
+            cursor.getColumnIndex(COLUMN_UPDATED_AT) >= 0
 
     private fun readTimestamp(cursor: Cursor, index: Int): Long? {
         if (cursor.isNull(index)) return null
@@ -118,6 +121,7 @@ class BooxMetadataProviderLocator(
         const val COLUMN_LAST_ACCESS = "lastAccess"
         const val COLUMN_TYPE = "type"
         const val COLUMN_NATIVE_ABSOLUTE_PATH = "nativeAbsolutePath"
+        const val COLUMN_UPDATED_AT = "updatedAt"
 
         private const val EXTERNAL_ROOT_SEGMENT = "external"
         private const val NO_RESULT_MESSAGE =
@@ -126,6 +130,7 @@ class BooxMetadataProviderLocator(
             COLUMN_LAST_ACCESS,
             COLUMN_TYPE,
             COLUMN_NATIVE_ABSOLUTE_PATH,
+            COLUMN_UPDATED_AT,
         )
         private const val SORT_ORDER = "$COLUMN_LAST_ACCESS DESC"
         private val PROVIDER_URI = Uri.parse(

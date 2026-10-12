@@ -31,7 +31,7 @@ class BooxMetadataCandidateSelectorTest {
         requireNotNull(result)
         assertEquals(newest.canonicalFile, result.file)
         assertEquals("books${File.separator}newest.epub", result.relativePath)
-        assertEquals(30L, result.lastAccess)
+        assertEquals(30L, result.lastActivity)
     }
 
     @Test
@@ -114,6 +114,49 @@ class BooxMetadataCandidateSelectorTest {
 
         requireNotNull(result)
         assertEquals(valid.canonicalFile, result.file)
-        assertEquals(10L, result.lastAccess)
+        assertEquals(10L, result.lastActivity)
+    }
+
+    @Test
+    fun `book opened in NeoReader wins by updatedAt before its lastAccess is written`() {
+        // NeoReader bumps updatedAt when a book opens but only writes
+        // lastAccess when the reader pauses, e.g. at screen-off.
+        val root = temporaryFolder.newFolder("storage")
+        val previous = temporaryFolder.newFile("storage/previous.epub")
+        val opened = temporaryFolder.newFile("storage/opened.epub")
+
+        val result = BooxMetadataCandidateSelector.select(
+            rows = listOf(
+                BooxMetadataRow(lastAccess = 300L, updatedAt = 300L, type = "epub", nativeAbsolutePath = previous.path),
+                BooxMetadataRow(lastAccess = 100L, updatedAt = 400L, type = "epub", nativeAbsolutePath = opened.path),
+            ),
+            externalStorageRoot = root,
+        )
+
+        requireNotNull(result)
+        assertEquals(opened.canonicalFile, result.file)
+        assertEquals(400L, result.lastActivity)
+    }
+
+    @Test
+    fun `uses whichever activity timestamp is present`() {
+        val root = temporaryFolder.newFolder("storage")
+        val onlyAccess = temporaryFolder.newFile("storage/only-access.epub")
+        val onlyUpdated = temporaryFolder.newFile("storage/only-updated.epub")
+        val rows = listOf(
+            BooxMetadataRow(lastAccess = 20L, updatedAt = null, type = "epub", nativeAbsolutePath = onlyAccess.path),
+            BooxMetadataRow(lastAccess = null, updatedAt = 10L, type = "epub", nativeAbsolutePath = onlyUpdated.path),
+        )
+
+        val result = BooxMetadataCandidateSelector.select(rows, root)
+
+        requireNotNull(result)
+        assertEquals(onlyAccess.canonicalFile, result.file)
+        assertNull(
+            BooxMetadataCandidateSelector.select(
+                listOf(BooxMetadataRow(lastAccess = null, updatedAt = null, type = "epub", nativeAbsolutePath = onlyAccess.path)),
+                root,
+            ),
+        )
     }
 }

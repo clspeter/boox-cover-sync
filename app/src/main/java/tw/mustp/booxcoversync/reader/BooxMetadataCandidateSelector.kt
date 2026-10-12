@@ -14,13 +14,19 @@ data class BooxMetadataRow(
     val lastAccess: Long?,
     val type: String?,
     val nativeAbsolutePath: String?,
+    /**
+     * NeoReader bumps this when a book opens, while [lastAccess] is written
+     * only when the reader pauses (e.g. at screen-off).
+     */
+    val updatedAt: Long? = null,
 )
 
 /** A validated Metadata row selected for the most recent EPUB. */
 data class BooxMetadataCandidate(
     val file: File,
     val relativePath: String,
-    val lastAccess: Long,
+    /** Newest of the row's `lastAccess` and `updatedAt`. */
+    val lastActivity: Long,
 )
 
 /**
@@ -55,7 +61,7 @@ object BooxMetadataCandidateSelector {
 
         return rows.asSequence()
             .mapNotNull { row -> validate(row, canonicalRoot, rootPath) }
-            .maxWithOrNull(compareBy<BooxMetadataCandidate> { it.lastAccess })
+            .maxWithOrNull(compareBy<BooxMetadataCandidate> { it.lastActivity })
     }
 
     private fun validate(
@@ -63,7 +69,7 @@ object BooxMetadataCandidateSelector {
         canonicalRoot: File,
         rootPath: java.nio.file.Path,
     ): BooxMetadataCandidate? {
-        val lastAccess = row.lastAccess ?: return null
+        val lastActivity = listOfNotNull(row.lastAccess, row.updatedAt).maxOrNull() ?: return null
         val type = row.type?.trim()?.takeIf { it.isNotEmpty() } ?: return null
         if (!isEpubType(type)) return null
 
@@ -95,7 +101,7 @@ object BooxMetadataCandidateSelector {
         return BooxMetadataCandidate(
             file = canonicalFile,
             relativePath = relativePath,
-            lastAccess = lastAccess,
+            lastActivity = lastActivity,
         )
     }
 
